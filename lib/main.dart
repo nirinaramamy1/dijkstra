@@ -1,3 +1,4 @@
+import 'package:dijkstra/create_server.dart';
 import 'package:flutter/material.dart';
 import 'package:dijkstra/graph_screen.dart';
 import 'package:dijkstra/graph.dart';
@@ -33,16 +34,222 @@ class MyHomePage extends StatefulWidget {
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
+  // note: updated as context.ancestorStateOfType is now deprecated
+  static _MyHomePageState? of(BuildContext context) =>
+      context.findAncestorStateOfType<_MyHomePageState>();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  TextEditingController sourceController = TextEditingController();
-  TextEditingController destinationController = TextEditingController();
+  final TextEditingController _sourceController = TextEditingController();
+  final TextEditingController _destinationController = TextEditingController();
 
-  final Graph graph = Graph();
-  late Algorithm builder;
+  final Graph _graph = Graph();
+  late Algorithm _builder;
 
   final GlobalKey<State<StatefulWidget>> _printKey = GlobalKey();
+
+  // final _json = {
+  //   "nodes": [
+  //     {"id": '8.8.8.8'},
+  //     {"id": '8.8.8.6'},
+  //     {"id": '8.8.8.1'},
+  //     {"id": '8.8.8.0'},
+  //     {"id": '8.8.8.5'},
+  //     {"id": '8.8.8.4'},
+  //     {"id": '8.8.8.2'},
+  //     {"id": '8.8.8.3'}
+  //   ],
+  //   "edges": [
+  //     {"from": '8.8.8.8', "to": '8.8.8.6'},
+  //     {"from": '8.8.8.8', "to": '8.8.8.4'},
+  //     {"from": '8.8.8.8', "to": '8.8.8.2'},
+  //     {"from": '8.8.8.2', "to": '8.8.8.1'},
+  //     {"from": '8.8.8.1', "to": '8.8.8.6'},
+  //     {"from": '8.8.8.1', "to": '8.8.8.5'},
+  //     {"from": '8.8.8.5', "to": '8.8.8.6'},
+  //     {"from": '8.8.8.5', "to": '8.8.8.0'},
+  //     {"from": '8.8.8.6', "to": '8.8.8.4'},
+  //     {"from": '8.8.8.3', "to": '8.8.8.2'},
+  //     {"from": '8.8.8.3', "to": '8.8.8.4'}
+  //   ],
+  //   "weights": [
+  //     {"weight": 8},
+  //     {"weight": 9},
+  //     {"weight": 1},
+  //     {"weight": 3},
+  //     {"weight": 3},
+  //     {"weight": 1},
+  //     {"weight": 1},
+  //     {"weight": 2},
+  //     {"weight": 3},
+  //     {"weight": 5},
+  //     {"weight": 2}
+  //   ]
+  // };
+  var _json = {"nodes": [], "edges": [], "weights": []};
+  String _shortestPath = "Calculate Shortest Path";
+  // set json(Map<String, List<dynamic>> value) => setState(() => _json = value);
+
+  void callbackNode(Map<String, List<dynamic>> json) {
+    setState(() {
+      _json = json;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _builder = FruchtermanReingoldAlgorithm(iterations: 1000);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print(_json);
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: Text(widget.title),
+      ),
+      body: Column(
+        children: [
+          Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _sourceController,
+                      decoration: const InputDecoration(labelText: 'source'),
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 10,
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _destinationController,
+                      decoration:
+                          const InputDecoration(labelText: 'destination'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(
+                width: 10,
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  try {
+                    final graph = AdjacencyList<String>();
+                    final nodes = <String, Vertex<String>>{};
+
+                    _json["nodes"]?.forEach((element) {
+                      nodes.addAll({
+                        '${element["id"]}':
+                            graph.createVertex('${element["id"]}')
+                      });
+                    });
+
+                    _json["edges"]?.asMap().forEach((index, element) {
+                      var fromNodeId = element['from'];
+                      var toNodeId = element['to'];
+                      var weight = _json['weights']?[index]['weight'];
+                      graph.addEdge(nodes[fromNodeId]!, nodes[toNodeId]!,
+                          weight: double.parse(weight.toString()),
+                          edgeType: EdgeType.directed);
+                      graph.addEdge(nodes[toNodeId]!, nodes[fromNodeId]!,
+                          weight: double.parse(weight.toString()),
+                          edgeType: EdgeType.directed);
+                    });
+                    Map<String, Vertex<String>> graphMap = {};
+                    for (int i = 0; i < graph.vertices.length; i++) {
+                      graphMap.addAll({
+                        graph.vertices.elementAt(i).toString():
+                            graph.vertices.elementAt(i)
+                      });
+                    }
+
+                    final dijkstra = Dijkstra(graph);
+                    final source = graphMap[_sourceController.text];
+                    final destination = graphMap[_destinationController.text];
+                    // final path = dijkstra.shortestPath(a, d);
+                    final path = dijkstra.shortestPath(source!, destination!);
+                    // final paths = dijkstra.shortestPaths(source);
+                    // print(paths);
+                    print(source);
+                    print(destination);
+                    print(path);
+                    List<String> pathToGo = [];
+                    for (int i = 1; i < path.length; i++) {
+                      pathToGo.add('${path[i - 1].toString()}'
+                          '${path[i].toString()}');
+                      pathToGo.add('${path[i].toString()}'
+                          '${path[i - 1].toString()}');
+                    }
+                    setState(() {
+                      _updateGraph(pathToGo);
+                    });
+                  } catch (e) {
+                    print('error: $e');
+                  }
+                },
+                child: Text(_shortestPath),
+              ),
+            ],
+          ),
+          const SizedBox(
+            height: 10,
+          ),
+          Expanded(
+            child: RepaintBoundary(
+              key: _printKey,
+              child: GraphClusterViewPage(graph: _graph, builder: _builder),
+            ),
+          )
+        ],
+      ),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            onPressed: _printScreen,
+          ),
+          IconButton(
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CreateServer(
+                    callback: callbackNode,
+                    json: _json,
+                  ),
+                ),
+              );
+              if (result == null) {
+                setState(() {
+                  _addServer();
+                });
+              }
+            },
+            icon: const Icon(Icons.settings),
+          ),
+          IconButton(
+            onPressed: () async {
+              await _resetGraph();
+              if (_json["nodes"]!.isEmpty) {
+                print("Hello");
+                setState(() {
+                  _addServer();
+                });
+              }
+            },
+            icon: const Icon(Icons.restart_alt),
+          )
+        ],
+      ),
+    );
+  }
 
   void _printScreen() {
     Printing.layoutPdf(onLayout: (PdfPageFormat format) async {
@@ -64,276 +271,29 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  var json = {
-    "nodes": [
-      // {"id": 'A', "label": ''},
-      // {"id": 'B', "label": ''},
-      // {"id": 'C', "label": ''},
-      // {"id": 'D', "label": ''},
-      // {"id": 'E', "label": ''},
-      // {"id": 'F', "label": ''},
-      // {"id": 'G', "label": ''},
-      // {"id": 'H', "label": ''}
-      {"id": '8.8.8.8', "label": ''},
-      {"id": '8.8.8.6', "label": ''},
-      {"id": '8.8.8.1', "label": ''},
-      {"id": '8.8.8.0', "label": ''},
-      {"id": '8.8.8.5', "label": ''},
-      {"id": '8.8.8.4', "label": ''},
-      {"id": '8.8.8.2', "label": ''},
-      {"id": '8.8.8.3', "label": ''}
-    ],
-    "edges": [
-      // {"from": 'A', "to": 'B'},
-      // {"from": 'A', "to": 'F'},
-      // {"from": 'A', "to": 'G'},
-      // {"from": 'G', "to": 'C'},
-      // {"from": 'C', "to": 'B'},
-      // {"from": 'C', "to": 'E'},
-      // {"from": 'E', "to": 'B'},
-      // {"from": 'E', "to": 'D'},
-      // {"from": 'B', "to": 'F'},
-      // {"from": 'H', "to": 'G'},
-      // {"from": 'H', "to": 'F'}
-      {"from": '8.8.8.8', "to": '8.8.8.6'},
-      {"from": '8.8.8.8', "to": '8.8.8.4'},
-      {"from": '8.8.8.8', "to": '8.8.8.2'},
-      {"from": '8.8.8.2', "to": '8.8.8.1'},
-      {"from": '8.8.8.1', "to": '8.8.8.6'},
-      {"from": '8.8.8.1', "to": '8.8.8.5'},
-      {"from": '8.8.8.5', "to": '8.8.8.6'},
-      {"from": '8.8.8.5', "to": '8.8.8.0'},
-      {"from": '8.8.8.6', "to": '8.8.8.4'},
-      {"from": '8.8.8.3', "to": '8.8.8.2'},
-      {"from": '8.8.8.3', "to": '8.8.8.4'}
-    ],
-    "weights": [
-      {"weight": 8},
-      {"weight": 9},
-      {"weight": 1},
-      {"weight": 3},
-      {"weight": 3},
-      {"weight": 1},
-      {"weight": 1},
-      {"weight": 2},
-      {"weight": 3},
-      {"weight": 5},
-      {"weight": 2}
-    ]
-  };
-
-  @override
-  void initState() {
-    super.initState();
-
-    // json["nodes"]
-
-    json["edges"]?.asMap().forEach((index, element) {
+  void _addServer() {
+    _json["edges"]?.asMap().forEach((index, element) {
       var fromNodeId = element['from'];
       var toNodeId = element['to'];
-      var weight = json['weights']?[index]['weight'];
-      graph.addEdge(
+      var weight = _json['weights']?[index]['weight'];
+      _graph.addEdge(
         Node.Id(fromNodeId),
         Node.Id(toNodeId),
         weight: double.parse(weight.toString()),
         paint: Paint()
-          // ..style = PaintingStyle()
           ..color = Colors.black.withOpacity(0.5)
           ..strokeWidth = 2,
       );
     });
-
-    // final a = Node.Id('192.168.1.15');
-    // final b = Node.Id('8.8.8.6');
-    // final c = Node.Id('8.8.8.1');
-    // final d = Node.Id('8.8.8.0');
-    // final e = Node.Id('8.8.8.5');
-    // final f = Node.Id('8.8.8.4');
-    // final g = Node.Id('8.8.8.2');
-    // final h = Node.Id('8.8.8.3');
-
-    // graph.addEdge(a, b, paint: Paint()..color = Colors.black);
-    // graph.addEdge(a, f, paint: Paint()..color = Colors.black);
-    // graph.addEdge(a, g, paint: Paint()..color = Colors.black);
-    // graph.addEdge(g, c, paint: Paint()..color = Colors.black);
-    // graph.addEdge(c, b, paint: Paint()..color = Colors.black);
-    // graph.addEdge(c, e, paint: Paint()..color = Colors.black);
-    // graph.addEdge(e, b, paint: Paint()..color = Colors.black);
-    // graph.addEdge(e, d, paint: Paint()..color = Colors.black);
-    // graph.addEdge(b, f, paint: Paint()..color = Colors.black);
-    // graph.addEdge(h, g, paint: Paint()..color = Colors.black);
-    // graph.addEdge(h, f, paint: Paint()..color = Colors.black);
-
-    builder = FruchtermanReingoldAlgorithm(iterations: 1000);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Column(
-        children: [
-          Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: sourceController,
-                      decoration: const InputDecoration(labelText: 'source'),
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 10,
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: destinationController,
-                      decoration:
-                          const InputDecoration(labelText: 'destination'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(
-                width: 10,
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  try {
-                    final graph = AdjacencyList<String>();
-                    final nodes = <String, Vertex<String>>{};
-                    // final a = graph.createVertex('192.168.1.15');
-                    // final b = graph.createVertex('8.8.8.6');
-                    // final c = graph.createVertex('8.8.8.1');
-                    // final d = graph.createVertex('8.8.8.0');
-                    // final e = graph.createVertex('8.8.8.5');
-                    // final f = graph.createVertex('8.8.8.4');
-                    // final g = graph.createVertex('8.8.8.2');
-                    // final h = graph.createVertex('8.8.8.3');
-
-                    json["nodes"]?.forEach((element) {
-                      nodes.addAll({
-                        '${element["id"]}':
-                            graph.createVertex('${element["id"]}')
-                      });
-                    });
-
-                    json["edges"]?.asMap().forEach((index, element) {
-                      var fromNodeId = element['from'];
-                      var toNodeId = element['to'];
-                      var weight = json['weights']?[index]['weight'];
-                      // var from =
-                      //     graph.createVertex(Node.Id(fromNodeId).key?.value);
-                      // var to = graph.createVertex(Node.Id(toNodeId).key?.value);
-                      // var from = nodes[fromNodeId];
-                      // var to = nodes[toNodeId];
-                      graph.addEdge(nodes[fromNodeId]!, nodes[toNodeId]!,
-                          weight: double.parse(weight.toString()),
-                          edgeType: EdgeType.directed);
-                      graph.addEdge(nodes[toNodeId]!, nodes[fromNodeId]!,
-                          weight: double.parse(weight.toString()),
-                          edgeType: EdgeType.directed);
-                    });
-
-                    // graph.addEdge(a, b, weight: 8, edgeType: EdgeType.directed);
-                    // graph.addEdge(b, a, weight: 8, edgeType: EdgeType.directed);
-
-                    // graph.addEdge(a, f, weight: 9, edgeType: EdgeType.directed);
-                    // graph.addEdge(f, a, weight: 9, edgeType: EdgeType.directed);
-
-                    // graph.addEdge(a, g, weight: 1, edgeType: EdgeType.directed);
-                    // graph.addEdge(g, a, weight: 1, edgeType: EdgeType.directed);
-
-                    // graph.addEdge(g, c, weight: 3, edgeType: EdgeType.directed);
-                    // graph.addEdge(c, g, weight: 3, edgeType: EdgeType.directed);
-
-                    // graph.addEdge(c, b, weight: 3, edgeType: EdgeType.directed);
-                    // graph.addEdge(b, c, weight: 3, edgeType: EdgeType.directed);
-
-                    // graph.addEdge(c, e, weight: 1, edgeType: EdgeType.directed);
-                    // graph.addEdge(e, c, weight: 1, edgeType: EdgeType.directed);
-
-                    // graph.addEdge(e, b, weight: 1, edgeType: EdgeType.directed);
-                    // graph.addEdge(b, e, weight: 1, edgeType: EdgeType.directed);
-
-                    // graph.addEdge(e, d, weight: 2, edgeType: EdgeType.directed);
-                    // graph.addEdge(d, e, weight: 2, edgeType: EdgeType.directed);
-
-                    // graph.addEdge(b, f, weight: 3, edgeType: EdgeType.directed);
-                    // graph.addEdge(f, b, weight: 3, edgeType: EdgeType.directed);
-
-                    // graph.addEdge(h, g, weight: 5, edgeType: EdgeType.directed);
-                    // graph.addEdge(f, h, weight: 5, edgeType: EdgeType.directed);
-
-                    // graph.addEdge(h, f, weight: 2, edgeType: EdgeType.directed);
-                    // graph.addEdge(f, h, weight: 2, edgeType: EdgeType.directed);
-
-                    Map<String, Vertex<String>> graphMap = {};
-                    for (int i = 0; i < graph.vertices.length; i++) {
-                      graphMap.addAll({
-                        graph.vertices.elementAt(i).toString():
-                            graph.vertices.elementAt(i)
-                      });
-                    }
-
-                    final dijkstra = Dijkstra(graph);
-                    final source = graphMap[sourceController.text];
-                    final destination = graphMap[destinationController.text];
-                    // final path = dijkstra.shortestPath(a, d);
-                    final path = dijkstra.shortestPath(source!, destination!);
-                    print(source);
-                    print(destination);
-                    print(path);
-                    List<String> pathToGo = [];
-                    for (int i = 1; i < path.length; i++) {
-                      pathToGo.add(
-                          '${path[i - 1].toString()}' '${path[i].toString()}');
-                      pathToGo.add(
-                          '${path[i].toString()}' '${path[i - 1].toString()}');
-                    }
-                    setState(() {
-                      updateGraph(pathToGo);
-                    });
-                  } catch (e) {
-                    print('error: $e');
-                  }
-                },
-                child: const Text('Calculate Shortest Path'),
-              ),
-            ],
-          ),
-          const SizedBox(
-            height: 10,
-          ),
-          Expanded(
-            child: RepaintBoundary(
-              key: _printKey,
-              child: GraphClusterViewPage(graph: graph, builder: builder),
-            ),
-          )
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _printScreen,
-        child: const Icon(Icons.print),
-      ),
-    );
+  Future<void> _resetGraph() async {
+    _json["nodes"] = [];
+    _json["edges"] = [];
+    _json["weights"] = [];
   }
 
-  void updateGraph(List<String> path) {
-    // final a = Node.Id('192.168.1.15');
-    // final b = Node.Id('8.8.8.6');
-    // final c = Node.Id('8.8.8.1');
-    // final d = Node.Id('8.8.8.0');
-    // final e = Node.Id('8.8.8.5');
-    // final f = Node.Id('8.8.8.4');
-    // final g = Node.Id('8.8.8.2');
-    // final h = Node.Id('8.8.8.3');
-
+  void _updateGraph(List<String> path) {
     Paint paintToRed = Paint();
     Paint paintToBlack = Paint();
 
@@ -342,58 +302,79 @@ class _MyHomePageState extends State<MyHomePage> {
     paintToBlack.color = Colors.black.withOpacity(0.5);
     paintToBlack.strokeWidth = 2;
 
-    json["edges"]?.forEach((element) {
+    _json["edges"]?.forEach((element) {
       var fromNodeId = element['from'];
       var toNodeId = element['to'];
-      graph.getEdgeBetween(Node.Id(fromNodeId), Node.Id(toNodeId))?.paint = [
+      _graph.getEdgeBetween(Node.Id(fromNodeId), Node.Id(toNodeId))?.paint = [
         '${Node.Id(fromNodeId).key?.value}' '${Node.Id(toNodeId).key?.value}'
       ].every((element) => path.contains(element))
           ? paintToRed
           : paintToBlack;
     });
-    // graph.getEdgeBetween(a, f)?.paint = ['${a.key?.value}' '${f.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
-    // graph.getEdgeBetween(a, b)?.paint = ['${a.key?.value}' '${b.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
-    // graph.getEdgeBetween(a, g)?.paint = ['${a.key?.value}' '${g.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
-    // graph.getEdgeBetween(g, c)?.paint = ['${g.key?.value}' '${c.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
-    // graph.getEdgeBetween(c, b)?.paint = ['${c.key?.value}' '${b.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
-    // graph.getEdgeBetween(c, e)?.paint = ['${c.key?.value}' '${e.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
-    // graph.getEdgeBetween(e, b)?.paint = ['${e.key?.value}' '${b.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
-    // graph.getEdgeBetween(e, d)?.paint = ['${e.key?.value}' '${d.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
-    // graph.getEdgeBetween(b, f)?.paint = ['${b.key?.value}' '${f.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
-    // graph.getEdgeBetween(h, g)?.paint = ['${h.key?.value}' '${g.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
-    // graph.getEdgeBetween(h, f)?.paint = ['${h.key?.value}' '${f.key?.value}']
-    //         .every((element) => path.contains(element))
-    //     ? paintToRed
-    //     : paintToBlack;
   }
 }
+
+// import 'package:flutter/material.dart';
+
+// class MyStatefulWidget extends StatefulWidget {
+//   const MyStatefulWidget({super.key});
+
+//   @override
+//   State<StatefulWidget> createState() => MyStatefulWidgetState();
+
+//   // note: updated as context.ancestorStateOfType is now deprecated
+//   static MyStatefulWidgetState? of(BuildContext context) =>
+//       context.findAncestorStateOfType<MyStatefulWidgetState>();
+// }
+
+// class MyStatefulWidgetState extends State<MyStatefulWidget> {
+//   String _string = "Not set yet";
+
+//   set string(String value) => setState(() => _string = value);
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Column(
+//       children: <Widget>[
+//         Text(_string),
+//         MyChildClass(callback: (val) => setState(() => _string = val))
+//       ],
+//     );
+//   }
+// }
+
+// typedef void StringCallback(String val);
+
+// class MyChildClass extends StatelessWidget {
+//   final StringCallback callback;
+
+//   MyChildClass({required this.callback});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Column(
+//       children: <Widget>[
+//         MaterialButton(
+//           onPressed: () {
+//             callback("String from method 1");
+//           },
+//           child: Text("Method 1"),
+//         ),
+//         MaterialButton(
+//           onPressed: () {
+//             MyStatefulWidget.of(context)?.string = "String from method 2";
+//           },
+//           child: Text("Method 2"),
+//         )
+//       ],
+//     );
+//   }
+// }
+
+// void main() => runApp(
+//       MaterialApp(
+//         builder: (context, child) =>
+//             SafeArea(child: Material(color: Colors.white, child: child)),
+//         home: MyStatefulWidget(),
+//       ),
+//     );

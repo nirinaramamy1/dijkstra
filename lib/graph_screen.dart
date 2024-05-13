@@ -66,13 +66,16 @@ class _GraphClusterViewPageState extends State<GraphClusterViewPage> {
         image: DecorationImage(
           fit: BoxFit.fill,
           image: AssetImage(
-            'assets/images/serveur.png',
+            'assets/images/serveur3.png',
           ),
         ),
       ),
       child: Text(
         '$ip',
-        style: const TextStyle(color: Colors.red),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
