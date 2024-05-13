@@ -4,4 +4,5 @@ I use GraphView to display the graph.
 
 # Enjoy
 flutter pub get
+
 flutter run
