@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:dijkstra/create_server.dart';
+import 'package:dijkstra/page_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:dijkstra/graph_screen.dart';
 import 'package:dijkstra/graph.dart';
+import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:graphview/GraphView.dart';
 import 'package:dijkstra/dijkstra.dart';
 import 'package:printing/printing.dart';
@@ -17,13 +21,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return Phoenix(
+      child: MaterialApp(
+        title: 'Flutter Demo',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          useMaterial3: true,
+        ),
+        home: const MyHomePage(title: 'Flutter Demo Home Page'),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
@@ -34,9 +40,6 @@ class MyHomePage extends StatefulWidget {
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
-  // note: updated as context.ancestorStateOfType is now deprecated
-  static _MyHomePageState? of(BuildContext context) =>
-      context.findAncestorStateOfType<_MyHomePageState>();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -87,8 +90,6 @@ class _MyHomePageState extends State<MyHomePage> {
   //   ]
   // };
   var _json = {"nodes": [], "edges": [], "weights": []};
-  String _shortestPath = "Calculate Shortest Path";
-  // set json(Map<String, List<dynamic>> value) => setState(() => _json = value);
 
   void callbackNode(Map<String, List<dynamic>> json) {
     setState(() {
@@ -174,8 +175,16 @@ class _MyHomePageState extends State<MyHomePage> {
                     final destination = graphMap[_destinationController.text];
                     // final path = dijkstra.shortestPath(a, d);
                     final path = dijkstra.shortestPath(source!, destination!);
-                    // final paths = dijkstra.shortestPaths(source);
-                    // print(paths);
+                    if (path.isNotEmpty) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PageScreen(
+                            url: path.last.toString(),
+                          ),
+                        ),
+                      );
+                    }
                     print(source);
                     print(destination);
                     print(path);
@@ -193,7 +202,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     print('error: $e');
                   }
                 },
-                child: Text(_shortestPath),
+                child: const Text("Calculate Shortest Path"),
               ),
             ],
           ),
@@ -238,7 +247,6 @@ class _MyHomePageState extends State<MyHomePage> {
             onPressed: () async {
               await _resetGraph();
               if (_json["nodes"]!.isEmpty) {
-                print("Hello");
                 setState(() {
                   _addServer();
                 });
@@ -291,6 +299,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _json["nodes"] = [];
     _json["edges"] = [];
     _json["weights"] = [];
+    Phoenix.rebirth(context);
   }
 
   void _updateGraph(List<String> path) {
@@ -313,68 +322,3 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 }
-
-// import 'package:flutter/material.dart';
-
-// class MyStatefulWidget extends StatefulWidget {
-//   const MyStatefulWidget({super.key});
-
-//   @override
-//   State<StatefulWidget> createState() => MyStatefulWidgetState();
-
-//   // note: updated as context.ancestorStateOfType is now deprecated
-//   static MyStatefulWidgetState? of(BuildContext context) =>
-//       context.findAncestorStateOfType<MyStatefulWidgetState>();
-// }
-
-// class MyStatefulWidgetState extends State<MyStatefulWidget> {
-//   String _string = "Not set yet";
-
-//   set string(String value) => setState(() => _string = value);
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Column(
-//       children: <Widget>[
-//         Text(_string),
-//         MyChildClass(callback: (val) => setState(() => _string = val))
-//       ],
-//     );
-//   }
-// }
-
-// typedef void StringCallback(String val);
-
-// class MyChildClass extends StatelessWidget {
-//   final StringCallback callback;
-
-//   MyChildClass({required this.callback});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Column(
-//       children: <Widget>[
-//         MaterialButton(
-//           onPressed: () {
-//             callback("String from method 1");
-//           },
-//           child: Text("Method 1"),
-//         ),
-//         MaterialButton(
-//           onPressed: () {
-//             MyStatefulWidget.of(context)?.string = "String from method 2";
-//           },
-//           child: Text("Method 2"),
-//         )
-//       ],
-//     );
-//   }
-// }
-
-// void main() => runApp(
-//       MaterialApp(
-//         builder: (context, child) =>
-//             SafeArea(child: Material(color: Colors.white, child: child)),
-//         home: MyStatefulWidget(),
-//       ),
-//     );
