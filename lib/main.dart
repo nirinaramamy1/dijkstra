@@ -1,10 +1,7 @@
-import 'dart:io';
-
-import 'package:dijkstra/create_server.dart';
-import 'package:dijkstra/page_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:dijkstra/graph_screen.dart';
 import 'package:dijkstra/graph.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:graphview/GraphView.dart';
 import 'package:dijkstra/dijkstra.dart';
@@ -45,6 +42,9 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _sourceController = TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
+  final TextEditingController _edgeFrom = TextEditingController();
+  final TextEditingController _edgeTo = TextEditingController();
+  final TextEditingController _weight = TextEditingController();
 
   final Graph _graph = Graph();
   late Algorithm _builder;
@@ -91,11 +91,11 @@ class _MyHomePageState extends State<MyHomePage> {
   // };
   var _json = {"nodes": [], "edges": [], "weights": []};
 
-  void callbackNode(Map<String, List<dynamic>> json) {
-    setState(() {
-      _json = json;
-    });
-  }
+  // void callbackNode(Map<String, List<dynamic>> json) {
+  //   setState(() {
+  //     _json = json;
+  //   });
+  // }
 
   @override
   void initState() {
@@ -113,136 +113,243 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Column(
         children: [
-          Column(
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _sourceController,
-                      decoration: const InputDecoration(labelText: 'source'),
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 10,
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _destinationController,
-                      decoration:
-                          const InputDecoration(labelText: 'destination'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(
-                width: 10,
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  try {
-                    final graph = AdjacencyList<String>();
-                    final nodes = <String, Vertex<String>>{};
-
-                    _json["nodes"]?.forEach((element) {
-                      nodes.addAll({
-                        '${element["id"]}':
-                            graph.createVertex('${element["id"]}')
-                      });
-                    });
-
-                    _json["edges"]?.asMap().forEach((index, element) {
-                      var fromNodeId = element['from'];
-                      var toNodeId = element['to'];
-                      var weight = _json['weights']?[index]['weight'];
-                      graph.addEdge(nodes[fromNodeId]!, nodes[toNodeId]!,
-                          weight: double.parse(weight.toString()),
-                          edgeType: EdgeType.directed);
-                      graph.addEdge(nodes[toNodeId]!, nodes[fromNodeId]!,
-                          weight: double.parse(weight.toString()),
-                          edgeType: EdgeType.directed);
-                    });
-                    Map<String, Vertex<String>> graphMap = {};
-                    for (int i = 0; i < graph.vertices.length; i++) {
-                      graphMap.addAll({
-                        graph.vertices.elementAt(i).toString():
-                            graph.vertices.elementAt(i)
-                      });
-                    }
-
-                    final dijkstra = Dijkstra(graph);
-                    final source = graphMap[_sourceController.text];
-                    final destination = graphMap[_destinationController.text];
-                    // final path = dijkstra.shortestPath(a, d);
-                    final path = dijkstra.shortestPath(source!, destination!);
-                    if (path.isNotEmpty) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PageScreen(
-                            url: path.last.toString(),
+              Expanded(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _sourceController,
+                            decoration:
+                                const InputDecoration(labelText: 'source'),
                           ),
                         ),
-                      );
-                    }
-                    print(source);
-                    print(destination);
-                    print(path);
-                    List<String> pathToGo = [];
-                    for (int i = 1; i < path.length; i++) {
-                      pathToGo.add('${path[i - 1].toString()}'
-                          '${path[i].toString()}');
-                      pathToGo.add('${path[i].toString()}'
-                          '${path[i - 1].toString()}');
-                    }
-                    setState(() {
-                      _updateGraph(pathToGo);
-                    });
-                  } catch (e) {
-                    print('error: $e');
-                  }
-                },
-                child: const Text("Calculate Shortest Path"),
+                        const SizedBox(
+                          width: 10,
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _destinationController,
+                            decoration:
+                                const InputDecoration(labelText: 'destination'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        try {
+                          final graph = AdjacencyList<String>();
+                          final nodes = <String, Vertex<String>>{};
+
+                          _json["nodes"]?.forEach((element) {
+                            nodes.addAll({
+                              '${element["id"]}':
+                                  graph.createVertex('${element["id"]}')
+                            });
+                          });
+
+                          _json["edges"]?.asMap().forEach((index, element) {
+                            var fromNodeId = element['from'];
+                            var toNodeId = element['to'];
+                            var weight = _json['weights']?[index]['weight'];
+                            graph.addEdge(nodes[fromNodeId]!, nodes[toNodeId]!,
+                                weight: double.parse(weight.toString()),
+                                edgeType: EdgeType.directed);
+                            graph.addEdge(nodes[toNodeId]!, nodes[fromNodeId]!,
+                                weight: double.parse(weight.toString()),
+                                edgeType: EdgeType.directed);
+                          });
+                          Map<String, Vertex<String>> graphMap = {};
+                          for (int i = 0; i < graph.vertices.length; i++) {
+                            graphMap.addAll({
+                              graph.vertices.elementAt(i).toString():
+                                  graph.vertices.elementAt(i)
+                            });
+                          }
+
+                          final dijkstra = Dijkstra(graph);
+                          final source = graphMap[_sourceController.text];
+                          final destination =
+                              graphMap[_destinationController.text];
+                          // final path = dijkstra.shortestPath(a, d);
+                          final path =
+                              dijkstra.shortestPath(source!, destination!);
+                          // if (path.isNotEmpty) {
+                          //   Navigator.push(
+                          //     context,
+                          //     MaterialPageRoute(
+                          //       builder: (context) => PageScreen(
+                          //         url: path.last.toString(),
+                          //       ),
+                          //     ),
+                          //   );
+                          // }
+                          print(source);
+                          print(destination);
+                          print(path);
+                          List<String> pathToGo = [];
+                          for (int i = 1; i < path.length; i++) {
+                            pathToGo.add('${path[i - 1].toString()}'
+                                '${path[i].toString()}');
+                            pathToGo.add('${path[i].toString()}'
+                                '${path[i - 1].toString()}');
+                          }
+                          setState(() {
+                            _updateGraph(pathToGo);
+                          });
+                        } catch (e) {
+                          print('error: $e');
+                        }
+                      },
+                      child: const Text("Calculate Shortest Path"),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
           const SizedBox(
             height: 10,
           ),
+          const Divider(
+            height: 5,
+          ),
           Expanded(
-            child: RepaintBoundary(
-              key: _printKey,
-              child: GraphClusterViewPage(graph: _graph, builder: _builder),
+            child: Row(
+              // child: Column(
+              children: [
+                const VerticalDivider(
+                  width: 5,
+                ),
+                Expanded(
+                  flex: 2,
+                  child: RepaintBoundary(
+                    key: _printKey,
+                    child: Container(
+                      color: Colors.red,
+                      width: double.infinity,
+                      height: double.infinity,
+                      child: GraphClusterViewPage(
+                        graph: _graph,
+                        builder: _builder,
+                      ),
+                    ),
+                  ),
+                ),
+                const VerticalDivider(
+                  width: 5,
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _edgeFrom,
+                              decoration:
+                                  const InputDecoration(labelText: 'From'),
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 10,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _edgeTo,
+                              decoration:
+                                  const InputDecoration(labelText: 'To'),
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 10,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _weight,
+                              decoration:
+                                  const InputDecoration(labelText: 'Weight'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (!_json["nodes"]!
+                                .contains({"id": _edgeFrom.text})) {
+                              _json["nodes"]?.add({"id": _edgeFrom.text});
+                            }
+                            if (!_json["nodes"]!
+                                .contains({"id": _edgeTo.text})) {
+                              _json["nodes"]?.add({"id": _edgeTo.text});
+                            }
+                            if (!_json["edges"]!.contains({
+                                  "from": _edgeFrom.text,
+                                  "to": _edgeTo.text
+                                }) &&
+                                !_json["edges"]!.contains({
+                                  "from": _edgeTo.text,
+                                  "to": _edgeFrom.text
+                                })) {
+                              _json["edges"]?.add(
+                                  {"from": _edgeFrom.text, "to": _edgeTo.text});
+                              _json["weights"]
+                                  ?.add({"weight": double.parse(_weight.text)});
+                            }
+                            setState(() {
+                              _json = _json;
+                              _addServer();
+                              _edgeFrom.text = '';
+                              _edgeTo.text = '';
+                              _weight.text = '';
+                            });
+                          },
+                          child: const Text('Save!'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           )
         ],
       ),
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.center,
+        textBaseline: TextBaseline.alphabetic,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
         children: [
           IconButton(
             icon: const Icon(Icons.print),
             onPressed: _printScreen,
           ),
-          IconButton(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CreateServer(
-                    callback: callbackNode,
-                    json: _json,
-                  ),
-                ),
-              );
-              if (result == null) {
-                setState(() {
-                  _addServer();
-                });
-              }
-            },
-            icon: const Icon(Icons.settings),
-          ),
+          // IconButton(
+          //   onPressed: () async {
+          //     final result = await Navigator.push(
+          //       context,
+          //       MaterialPageRoute(
+          //         builder: (context) => CreateServer(
+          //           callback: callbackNode,
+          //           json: _json,
+          //         ),
+          //       ),
+          //     );
+          //     if (result == null) {
+          //       setState(() {
+          //         _addServer();
+          //       });
+          //     }
+          //   },
+          //   icon: const Icon(Icons.settings),
+          // ),
           IconButton(
             onPressed: () async {
               await _resetGraph();
