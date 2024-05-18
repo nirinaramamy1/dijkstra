@@ -92,6 +92,7 @@ class _MyHomePageState extends State<MyHomePage> {
   //   ]
   // };
   var _json = {"nodes": [], "edges": [], "weights": []};
+  var _urlLists = [];
   Map<String, List<String>> _jsonUrls = {};
   // void callbackNode(Map<String, List<dynamic>> json) {
   //   setState(() {
@@ -109,7 +110,6 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     var originalNode = _json["nodes"];
     List<Map<String, dynamic>> uniqueNode = [];
-    var urlLists = [];
 
     for (var item in originalNode!) {
       bool isDuplicate = false;
@@ -125,6 +125,9 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     _json["nodes"] = uniqueNode;
     print(_json);
+    print(_jsonUrls);
+    print(_urlLists);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -162,6 +165,16 @@ class _MyHomePageState extends State<MyHomePage> {
                     ElevatedButton(
                       onPressed: () {
                         try {
+                          // if (path.isNotEmpty) {
+                          //   Navigator.push(
+                          //     context,
+                          //     MaterialPageRoute(
+                          //       builder: (context) => PageScreen(
+                          //         url: path.last.toString(),
+                          //       ),
+                          //     ),
+                          //   );
+                          // }
                           final graph = AdjacencyList<String>();
                           final nodes = <String, Vertex<String>>{};
 
@@ -193,33 +206,66 @@ class _MyHomePageState extends State<MyHomePage> {
 
                           final dijkstra = Dijkstra(graph);
                           final source = graphMap[_sourceController.text];
-                          final destination =
-                              graphMap[_destinationController.text];
-                          final path =
-                              dijkstra.shortestPath(source!, destination!);
-                          // if (path.isNotEmpty) {
-                          //   Navigator.push(
-                          //     context,
-                          //     MaterialPageRoute(
-                          //       builder: (context) => PageScreen(
-                          //         url: path.last.toString(),
-                          //       ),
-                          //     ),
-                          //   );
-                          // }
-                          print(source);
-                          print(destination);
-                          print(path);
-                          List<String> pathToGo = [];
-                          for (int i = 1; i < path.length; i++) {
-                            pathToGo.add('${path[i - 1].toString()}'
-                                '${path[i].toString()}');
-                            pathToGo.add('${path[i].toString()}'
-                                '${path[i - 1].toString()}');
+                          // final destination =
+                          //     graphMap[_destinationController.text];
+                          // var path =
+                          //     dijkstra.shortestPath(source!, destination!);
+                          List<Vertex<String>> path;
+                          // All paths
+                          for (var destination in _json["nodes"]!) {
+                            if (destination["id"] == source.toString()) {
+                              if (_jsonUrls[destination["id"]]!
+                                  .contains(_destinationController.text)) {
+                                print("Found it");
+                                path = dijkstra.shortestPath(
+                                    source!, graphMap[destination["id"]]!);
+                                print(path);
+                                break;
+                              }
+                            }
+                            if (destination["id"] != source.toString()) {
+                              path = dijkstra.shortestPath(
+                                  source!, graphMap[destination["id"]]!);
+                              // print(
+                              //     "Path destination ${destination["id"]} : $path");
+                              // print("Urls ${_jsonUrls[destination["id"]]}");
+                              if (_jsonUrls[destination["id"]]!
+                                  .contains(_destinationController.text)) {
+                                print("Ok");
+                                print(
+                                    "Path destination ${destination["id"]} : $path");
+                                Map<String, String> fromTo, toFrom;
+                                for (int i = 1; i < path.length; i++) {
+                                  fromTo = {
+                                    "from": path[i - 1].toString(),
+                                    "to": path[i].toString()
+                                  };
+                                  toFrom = {
+                                    "from": path[i].toString(),
+                                    "to": path[i - 1].toString()
+                                  };
+                                  if (_json["edges"]![0] ==
+                                      {"from": "A", "to": "B"}) {
+                                    print("Oui");
+                                  }
+                                  print(_json["edges"]!.contains(toFrom));
+                                }
+                              }
+                            }
                           }
-                          setState(() {
-                            _updateGraph(pathToGo);
-                          });
+                          // print(source);
+                          // print(destination);
+                          // print(path);
+                          // List<String> pathToGo = [];
+                          // for (int i = 1; i < path.length; i++) {
+                          //   pathToGo.add('${path[i - 1].toString()}'
+                          //       '${path[i].toString()}');
+                          //   pathToGo.add('${path[i].toString()}'
+                          //       '${path[i - 1].toString()}');
+                          // }
+                          // setState(() {
+                          //   _updateGraph(pathToGo);
+                          // });
                         } catch (e) {
                           print('error: $e');
                         }
@@ -340,7 +386,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               _weight.text = '';
                             });
                           },
-                          child: const Text('Save'),
+                          child: const Text('Save edge'),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -355,15 +401,48 @@ class _MyHomePageState extends State<MyHomePage> {
                         controller: _domains,
                         decoration: const InputDecoration(labelText: 'Domains'),
                       ),
+                      // Center(
+                      //   child: ElevatedButton(
+                      //     onPressed: () {
+                      //       setState(() {
+                      //         if (_jsonUrls[_server.text]!.isNotEmpty) {
+                      //           _jsonUrls[_server.text]!
+                      //               .addAll(_domains.text.split(","));
+                      //         } else {
+                      //           _jsonUrls[_server.text] = [];
+                      //           _jsonUrls[_server.text]!
+                      //               .addAll(_domains.text.split(","));
+                      //         }
+                      //         _server.text = '';
+                      //         _domains.text = '';
+                      //       });
+                      //     },
+                      //     child: const Text('Save url'),
+                      //   ),
+                      // ),
                       Center(
                         child: ElevatedButton(
                           onPressed: () {
-                            _jsonUrls[_server.text] = _domains.text.split(",");
-                            setState(() {
-                              _domains.text = '';
-                            });
+                            // Ensure _jsonUrls[_server.text] is not null before adding elements
+                            if (_jsonUrls.containsKey(_server.text)) {
+                              var urls = _jsonUrls[_server.text];
+                              if (urls != null && urls.isNotEmpty) {
+                                urls.addAll(_domains.text.split(","));
+                              } else {
+                                urls = [];
+                                urls.addAll(_domains.text.split(","));
+                              }
+                              _jsonUrls[_server.text] = urls;
+                            } else {
+                              // Initialize _jsonUrls[_server.text] if it doesn't exist
+                              _jsonUrls[_server.text] = [];
+                              _jsonUrls[_server.text]!
+                                  .addAll(_domains.text.split(","));
+                            }
+                            _server.text = '';
+                            _domains.text = '';
                           },
-                          child: const Text('Save'),
+                          child: const Text('Save url'),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -376,8 +455,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         child: ElevatedButton(
                           onPressed: () {
                             setState(() {
-                              urlLists = _jsonUrls[_nodeUrls.text]!;
-                              _nodeUrls.text = '';
+                              _urlLists = _jsonUrls[_nodeUrls.text]!;
                             });
                           },
                           child: const Text('View'),
@@ -385,8 +463,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       Column(
                         children: List.generate(
-                          urlLists.length,
-                          (index) => Text(_jsonUrls[_nodeUrls.text]![index]),
+                          _urlLists.length,
+                          (index) => Text(_urlLists[index]),
                         ),
                       )
                     ],
