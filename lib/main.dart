@@ -211,6 +211,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           // var path =
                           //     dijkstra.shortestPath(source!, destination!);
                           List<Vertex<String>> path;
+                          List<List<Vertex<String>>> allPaths = [];
+                          List<double> allPathsWeights = [];
                           // All paths
                           for (var destination in _json["nodes"]!) {
                             if (destination["id"] == source.toString()) {
@@ -220,39 +222,50 @@ class _MyHomePageState extends State<MyHomePage> {
                                 path = dijkstra.shortestPath(
                                     source!, graphMap[destination["id"]]!);
                                 print(path);
+                                allPaths.add(path);
                                 break;
                               }
                             }
                             if (destination["id"] != source.toString()) {
                               path = dijkstra.shortestPath(
                                   source!, graphMap[destination["id"]]!);
+                              allPaths.add(path);
                               // print(
                               //     "Path destination ${destination["id"]} : $path");
                               // print("Urls ${_jsonUrls[destination["id"]]}");
                               if (_jsonUrls[destination["id"]]!
                                   .contains(_destinationController.text)) {
-                                print("Ok");
+                                // print("Ok");
                                 print(
                                     "Path destination ${destination["id"]} : $path");
-                                Map<String, String> fromTo, toFrom;
-                                for (int i = 1; i < path.length; i++) {
-                                  fromTo = {
-                                    "from": path[i - 1].toString(),
-                                    "to": path[i].toString()
-                                  };
-                                  toFrom = {
-                                    "from": path[i].toString(),
-                                    "to": path[i - 1].toString()
-                                  };
-                                  if (_json["edges"]![0] ==
-                                      {"from": "A", "to": "B"}) {
-                                    print("Oui");
-                                  }
-                                  print(_json["edges"]!.contains(toFrom));
+                                String fromTo, toFrom;
+                                List<String> fromToTofrom = [];
+                                for (int i = 0;
+                                    i < _json["edges"]!.length;
+                                    i++) {
+                                  fromToTofrom.add(
+                                      "${_json["edges"]![i]["to"]}${_json["edges"]![i]["from"]}");
+                                  fromToTofrom.add(
+                                      "${_json["edges"]![i]["from"]}${_json["edges"]![i]["to"]}");
                                 }
+                                double pathWeights = 0.0;
+                                for (int i = 1; i < path.length; i++) {
+                                  fromTo = "${path[i - 1]}${path[i]}";
+                                  toFrom = "${path[i]}${path[i - 1]}";
+                                  if (fromToTofrom.contains(fromTo) ||
+                                      fromToTofrom.contains(toFrom)) {
+                                    print("Oui");
+                                    print(_json["weights"]![i]["weight"]);
+                                    pathWeights +=
+                                        _json["weights"]![i]["weight"];
+                                  }
+                                }
+                                allPathsWeights.add(pathWeights);
                               }
                             }
                           }
+                          print(allPathsWeights);
+                          print(allPaths);
                           // print(source);
                           // print(destination);
                           // print(path);
