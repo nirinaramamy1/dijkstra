@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dijkstra/graph_screen.dart';
 import 'package:dijkstra/graph.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:graphview/GraphView.dart';
 import 'package:dijkstra/dijkstra.dart';
@@ -45,6 +44,9 @@ class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _edgeFrom = TextEditingController();
   final TextEditingController _edgeTo = TextEditingController();
   final TextEditingController _weight = TextEditingController();
+  final TextEditingController _server = TextEditingController();
+  final TextEditingController _domains = TextEditingController();
+  final TextEditingController _nodeUrls = TextEditingController();
 
   final Graph _graph = Graph();
   late Algorithm _builder;
@@ -53,14 +55,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // final _json = {
   //   "nodes": [
-  //     {"id": '8.8.8.8'},
-  //     {"id": '8.8.8.6'},
-  //     {"id": '8.8.8.1'},
-  //     {"id": '8.8.8.0'},
-  //     {"id": '8.8.8.5'},
-  //     {"id": '8.8.8.4'},
-  //     {"id": '8.8.8.2'},
-  //     {"id": '8.8.8.3'}
+  //     {"id": '8.8.8.8', "url": ["facebook", "youtube"]},
+  //     {"id": '8.8.8.6', "url": ["twitter", "google"]},
+  //     {"id": '8.8.8.1', "url": ["amazon"]},
+  //     {"id": '8.8.8.0', "url": ["google", "twitter"]},
+  //     {"id": '8.8.8.5', "url": ["youtube"]},
+  //     {"id": '8.8.8.4', "url": ["youtube", "google"]},
+  //     {"id": '8.8.8.2', "url": ["google", "amazon"]},
+  //     {"id": '8.8.8.3', "url": ["twitter", "youtube"]}
   //   ],
   //   "edges": [
   //     {"from": '8.8.8.8', "to": '8.8.8.6'},
@@ -90,7 +92,7 @@ class _MyHomePageState extends State<MyHomePage> {
   //   ]
   // };
   var _json = {"nodes": [], "edges": [], "weights": []};
-
+  Map<String, List<String>> _jsonUrls = {};
   // void callbackNode(Map<String, List<dynamic>> json) {
   //   setState(() {
   //     _json = json;
@@ -105,6 +107,23 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    var originalNode = _json["nodes"];
+    List<Map<String, dynamic>> uniqueNode = [];
+    var urlLists = [];
+
+    for (var item in originalNode!) {
+      bool isDuplicate = false;
+      for (var existingItem in uniqueNode) {
+        if (existingItem['id'] == item['id']) {
+          isDuplicate = true;
+          break;
+        }
+      }
+      if (!isDuplicate) {
+        uniqueNode.add(item);
+      }
+    }
+    _json["nodes"] = uniqueNode;
     print(_json);
     return Scaffold(
       appBar: AppBar(
@@ -176,7 +195,6 @@ class _MyHomePageState extends State<MyHomePage> {
                           final source = graphMap[_sourceController.text];
                           final destination =
                               graphMap[_destinationController.text];
-                          // final path = dijkstra.shortestPath(a, d);
                           final path =
                               dijkstra.shortestPath(source!, destination!);
                           // if (path.isNotEmpty) {
@@ -282,14 +300,6 @@ class _MyHomePageState extends State<MyHomePage> {
                       Center(
                         child: ElevatedButton(
                           onPressed: () {
-                            if (!_json["nodes"]!
-                                .contains({"id": _edgeFrom.text})) {
-                              _json["nodes"]?.add({"id": _edgeFrom.text});
-                            }
-                            if (!_json["nodes"]!
-                                .contains({"id": _edgeTo.text})) {
-                              _json["nodes"]?.add({"id": _edgeTo.text});
-                            }
                             if (!_json["edges"]!.contains({
                                   "from": _edgeFrom.text,
                                   "to": _edgeTo.text
@@ -298,8 +308,27 @@ class _MyHomePageState extends State<MyHomePage> {
                                   "from": _edgeTo.text,
                                   "to": _edgeFrom.text
                                 })) {
-                              _json["edges"]?.add(
-                                  {"from": _edgeFrom.text, "to": _edgeTo.text});
+                              if (_edgeFrom.text.isNotEmpty &&
+                                  _edgeTo.text.isNotEmpty) {
+                                _json["edges"]?.add({
+                                  "from": _edgeFrom.text,
+                                  "to": _edgeTo.text
+                                });
+                                if (!_json["nodes"]!
+                                    .contains({"id": _edgeFrom.text})) {
+                                  if (_edgeFrom.text.isNotEmpty) {
+                                    _json["nodes"]?.add({"id": _edgeFrom.text});
+                                  }
+                                }
+                                if (!_json["nodes"]!
+                                    .contains({"id": _edgeTo.text})) {
+                                  if (_edgeTo.text.isNotEmpty) {
+                                    _json["nodes"]?.add({"id": _edgeTo.text});
+                                  }
+                                }
+                              }
+                            }
+                            if (_weight.text.isNotEmpty) {
                               _json["weights"]
                                   ?.add({"weight": double.parse(_weight.text)});
                             }
@@ -311,9 +340,55 @@ class _MyHomePageState extends State<MyHomePage> {
                               _weight.text = '';
                             });
                           },
-                          child: const Text('Save!'),
+                          child: const Text('Save'),
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      const Center(child: Text("Node")),
+                      TextField(
+                        controller: _server,
+                        decoration: const InputDecoration(labelText: 'Server'),
+                      ),
+                      const SizedBox(height: 20),
+                      const Center(child: Text("Urls")),
+                      TextField(
+                        controller: _domains,
+                        decoration: const InputDecoration(labelText: 'Domains'),
+                      ),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _jsonUrls[_server.text] = _domains.text.split(",");
+                            setState(() {
+                              _domains.text = '';
+                            });
+                          },
+                          child: const Text('Save'),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Center(child: Text("Urls lists")),
+                      TextField(
+                        controller: _nodeUrls,
+                        decoration: const InputDecoration(labelText: 'Node'),
+                      ),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              urlLists = _jsonUrls[_nodeUrls.text]!;
+                              _nodeUrls.text = '';
+                            });
+                          },
+                          child: const Text('View'),
+                        ),
+                      ),
+                      Column(
+                        children: List.generate(
+                          urlLists.length,
+                          (index) => Text(_jsonUrls[_nodeUrls.text]![index]),
+                        ),
+                      )
                     ],
                   ),
                 ),

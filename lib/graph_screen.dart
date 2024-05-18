@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:graphview/GraphView.dart';
 
@@ -60,9 +58,7 @@ class _GraphClusterViewPageState extends State<GraphClusterViewPage> {
         // ],
         image: DecorationImage(
           fit: BoxFit.fill,
-          image: AssetImage(
-            'assets/images/serveur3.png',
-          ),
+          image: AssetImage("assets/images/serveur3.png"),
         ),
       ),
       child: Text(
