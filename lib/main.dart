@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:dijkstra/graph_screen.dart';
 import 'package:dijkstra/graph.dart';
@@ -124,9 +126,9 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     }
     _json["nodes"] = uniqueNode;
-    print(_json);
-    print(_jsonUrls);
-    print(_urlLists);
+    // print(_json);
+    // print(_jsonUrls);
+    // print(_urlLists);
 
     return Scaffold(
       appBar: AppBar(
@@ -210,34 +212,42 @@ class _MyHomePageState extends State<MyHomePage> {
                           //     graphMap[_destinationController.text];
                           // var path =
                           //     dijkstra.shortestPath(source!, destination!);
-                          List<Vertex<String>> path;
+                          List<Vertex<String>>? path;
                           List<List<Vertex<String>>> allPaths = [];
                           List<double> allPathsWeights = [];
+                          int j = 0;
+                          double min = 0;
                           // All paths
-                          for (var destination in _json["nodes"]!) {
-                            if (destination["id"] == source.toString()) {
-                              if (_jsonUrls[destination["id"]]!
+
+                          var _jsonTmp = _json["nodes"];
+                          bool isPass = false;
+                          // for (var destination in _jsonTmp!) {
+                          for (int k = 0; k < _jsonTmp!.length; k++) {
+                            if (_jsonTmp[k]["id"] == source.toString()) {
+                              if (_jsonUrls[_jsonTmp[k]["id"]]!
                                   .contains(_destinationController.text)) {
                                 print("Found it");
                                 path = dijkstra.shortestPath(
-                                    source!, graphMap[destination["id"]]!);
+                                    source!, graphMap[_jsonTmp[k]["id"]]!);
                                 print(path);
                                 allPaths.add(path);
-                                break;
+                                // _jsonTmp = [];
+                                print("JSON $_jsonTmp");
+                                isPass = true;
                               }
                             }
-                            if (destination["id"] != source.toString()) {
+                            if (_jsonTmp[k]["id"] != source.toString()) {
                               path = dijkstra.shortestPath(
-                                  source!, graphMap[destination["id"]]!);
+                                  source!, graphMap[_jsonTmp[k]["id"]]!);
                               allPaths.add(path);
                               // print(
                               //     "Path destination ${destination["id"]} : $path");
                               // print("Urls ${_jsonUrls[destination["id"]]}");
-                              if (_jsonUrls[destination["id"]]!
+                              if (_jsonUrls[_jsonTmp[k]["id"]]!
                                   .contains(_destinationController.text)) {
                                 // print("Ok");
                                 print(
-                                    "Path destination ${destination["id"]} : $path");
+                                    "Path destination ${_jsonTmp[k]["id"]} : $path");
                                 String fromTo, toFrom;
                                 List<String> fromToTofrom = [];
                                 for (int i = 0;
@@ -255,30 +265,47 @@ class _MyHomePageState extends State<MyHomePage> {
                                   if (fromToTofrom.contains(fromTo) ||
                                       fromToTofrom.contains(toFrom)) {
                                     print("Oui");
-                                    print(_json["weights"]![i]["weight"]);
+                                    print(_json["weights"]![j]["weight"]);
                                     pathWeights +=
-                                        _json["weights"]![i]["weight"];
+                                        _json["weights"]![j]["weight"];
                                   }
                                 }
                                 allPathsWeights.add(pathWeights);
+                              }
+                              j++;
+                            }
+                            print("JSON $_jsonTmp");
+                            if (isPass) {
+                              k = _jsonTmp.length;
+                              for (var p in allPaths) {
+                                if (p.length == 1) {
+                                  allPaths = [p];
+                                }
                               }
                             }
                           }
                           print(allPathsWeights);
                           print(allPaths);
+
+                          if (allPathsWeights.isNotEmpty) {
+                            min = allPathsWeights.min;
+                            path = allPaths[allPathsWeights.indexOf(min)];
+                          }
+                          print(path);
+
                           // print(source);
                           // print(destination);
                           // print(path);
-                          // List<String> pathToGo = [];
-                          // for (int i = 1; i < path.length; i++) {
-                          //   pathToGo.add('${path[i - 1].toString()}'
-                          //       '${path[i].toString()}');
-                          //   pathToGo.add('${path[i].toString()}'
-                          //       '${path[i - 1].toString()}');
-                          // }
-                          // setState(() {
-                          //   _updateGraph(pathToGo);
-                          // });
+                          List<String> pathToGo = [];
+                          for (int i = 1; i < path!.length; i++) {
+                            pathToGo.add('${path[i - 1].toString()}'
+                                '${path[i].toString()}');
+                            pathToGo.add('${path[i].toString()}'
+                                '${path[i - 1].toString()}');
+                          }
+                          setState(() {
+                            _updateGraph(pathToGo);
+                          });
                         } catch (e) {
                           print('error: $e');
                         }
@@ -468,7 +495,11 @@ class _MyHomePageState extends State<MyHomePage> {
                         child: ElevatedButton(
                           onPressed: () {
                             setState(() {
-                              _urlLists = _jsonUrls[_nodeUrls.text]!;
+                              if (_nodeUrls.text.isEmpty) {
+                                _urlLists = [''];
+                              } else {
+                                _urlLists = _jsonUrls[_nodeUrls.text]!;
+                              }
                             });
                           },
                           child: const Text('View'),
